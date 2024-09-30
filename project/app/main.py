@@ -1,25 +1,38 @@
 # project/app/main.py
-"""
-# Run application
-Run server with reloading on save: uvicorn app.main:app --reload
-Run server without reloading: uvicorn app.main:app
 
-# View documentation
-Raw JSON: http://localhost:8000/openapi.json
-Swagger UI: http://localhost:8000/docs
-ReDoc: http://localhost:8000/redoc
-"""
+import logging
 
-from fastapi import FastAPI, Depends
-from app.config import get_settings, Settings
+from fastapi import FastAPI
 
-app = FastAPI()
+from app.api import ping, summaries
+from app.db import init_db
+
+# Create a logger instance with the name uvicorn
+log = logging.getLogger("uvicorn")
 
 
-@app.get("/ping")
-async def pong(settings: Settings = Depends(get_settings)):
-    return {
-        "ping": "pong!",
-        "environment": settings.environment,
-        "testing": settings.testing,
-    }
+# Function to initialise application
+def create_application() -> FastAPI:
+    application = FastAPI()
+    # Include the ping router
+    application.include_router(ping.router)
+    # Include the summaries router
+    application.include_router(
+        summaries.router, prefix="/summaries", tags=["summaries"]
+    )
+
+    return application
+
+
+app = create_application()  # Create the FastAPI application
+
+
+@app.on_event("startup")
+async def startup_event():
+    log.info("Starting up...")
+    init_db(app)
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    log.info("Shutting down...")

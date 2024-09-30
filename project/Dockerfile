@@ -10,6 +10,11 @@ WORKDIR /usr/src/app
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
+# install system dependencies
+RUN apt-get update \
+    && apt-get -y install netcat-traditional gcc postgresql \
+    && apt-get clean
+
 # install python dependencies
 # Upgrade pip to the latest version, copy the requirements file and install the dependencies
 RUN pip install --upgrade pip
@@ -18,3 +23,10 @@ RUN pip install -r requirements.txt
 
 # copy project from the current location to the working directory
 COPY . .
+
+# Add entrypoint.sh to the working directory
+COPY ./entrypoint.sh .
+RUN chmod +x /usr/src/app/entrypoint.sh
+
+# run entrypoint.sh
+ENTRYPOINT [ "/usr/src/app/entrypoint.sh" ]

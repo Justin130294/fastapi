@@ -6,6 +6,8 @@ File to define environment specific configuration variables
 
 import logging
 from functools import lru_cache
+
+from pydantic import AnyUrl
 from pydantic_settings import BaseSettings
 
 log = logging.getLogger("uvicorn")
@@ -13,7 +15,8 @@ log = logging.getLogger("uvicorn")
 
 class Settings(BaseSettings):
     environment: str = "dev"
-    testing: bool = False
+    testing: bool = 0
+    database_url: AnyUrl = None
 
 
 # Cache the dependency function so it is not executed every time it is requested

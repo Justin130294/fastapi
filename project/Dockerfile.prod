@@ -1,0 +1,54 @@
+# pull official base image
+FROM python:3.12.1-slim-bookworm
+
+# Create directory for the app user
+RUN mkdir -p /home/app
+
+# Create the system group called app and add the user app to the group
+RUN addgroup --system app && adduser --system --group app
+
+# Create the directories
+# HOME = home directory for the application user
+# APP_HOME = directory for the application code
+ENV HOME=/home/app
+ENV APP_HOME=/home/app/web
+RUN mkdir $APP_HOME
+WORKDIR $APP_HOME
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV ENVIRONMENT=prod
+ENV TESTING=0
+
+# Install system dependencies
+RUN apt-get update \
+    && apt-get -y install netcat-traditional gcc postgresql \
+    && apt-get clean
+
+# Install python dependencies
+RUN pip install --upgrade pip
+COPY ./requirements.txt .
+RUN pip install -r requirements.txt
+RUN pip install "uvicorn[standard]==0.26.0"
+
+# Copy the project
+COPY . .
+
+# Change owner of all the files in $APP_HOME to the app user
+# -R flag: This specifies that the operation should be performed recursively.
+#  app:app: This specifies the new owner and group for the files and directories.
+# The format is user:group, where app is the user and app is the group.
+# This means that the user app and the group app will own the specified directory and its contents.
+# $APP_HOME: This is the environment variable that holds the path to the application directory
+RUN chown -R app:app $APP_HOME
+
+# Change to the app user
+USER app
+
+# Run gunicorn
+# gunicorn: This is the Gunicorn HTTP server.
+# app.main:app - This specifies the location of the FastAPI instance.
+# The $PORT environment variable is supplied by Heroku
+# -k uvicorn.workers.UvicornWorker: This specifies the worker class to use.
+CMD gunicorn --bind 0.0.0.0:$PORT app.main:app -k uvicorn.workers.UvicornWorker
